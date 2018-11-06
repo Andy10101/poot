@@ -1,6 +1,5 @@
 import poot.by as By
-from xml.dom.minidom import Text,Element
-
+from xml.dom.minidom import Element
 
 class Bound():
     #位置信息
@@ -8,10 +7,10 @@ class Bound():
     def __init__(self,bounds:str):
         x1,y1=bounds.split("][")[0].split(",")
         x2,y2=bounds.split("][")[1].split(",")
-        self._left_x=x1
+        self._left_x=x1[1:]
         self._left_y=y1
         self._right_x=x2
-        self._right_y=y2
+        self._right_y=y2[0:-2]
     def __str__(self):
         return "[%s,%s][%s,%s]" % (self._left_x,self._left_y,self._right_x,self._right_y)
     @property
@@ -31,13 +30,18 @@ class Node():
     #节点信息类
     #包含了单个节点的所有信息
     def __init__(self,nodeinfor):
+        self._childs=None
+        self._bounds=None
+        self._text=None
+        self._resource_id=None
+        self._parent_node=None
+        self._clazz=None
+        self._package=None
         self._nodeinfor=nodeinfor
-        self.__take_childs()
-        self.__take_parent_node()
 
-    def __resolve_attr(self):
-        self.__take_bounds()
-        attr_key=[""]
+    def __str__(self):
+        #[resource-id,text,desc,bounds]
+        return "%s：%s [%s]" % (self.clazz,self.text,self.bounds)
     def __take_childs(self):
         '''
         获得子节点集合
@@ -49,14 +53,16 @@ class Node():
             child_nodes=self._nodeinfor.childNodes
             for child in child_nodes:
                 if type(child)==Element:#只解析元素型节点，忽略文本型节点
-                    self._childs.append(child)
+                    self._childs.append(Node(child))
+        if len(self._childs)<=0:
+            self._childs=None
 
     def __take_parent_node(self):
         '''
         获得此节点的父节点
         :return:
         '''
-        self._parent_node=self._nodeinfor.parentNode
+        self._parent_node=Node(self._nodeinfor.parentNode)
     def __take_attr(self,attr_name):
         '''
         返回此节点对应的属性值，不存在返回None
@@ -75,83 +81,82 @@ class Node():
             self._bounds=Bound(bounds)
         else:
             self._bounds=None
-    @property
-    def resource_id(self):
+    def is_same_node(self,node):
         '''
-        获取此节点的资源id，不存在返回None
+        判断当前节点和node节点是否来自同一个引用
+        :param node:
         :return:
         '''
-        return self.__take_attr("resource-id")
-    @property
-    def text(self):
+        return self._nodeinfor.isSameNode(node.nodeinfor)
+
+    def have_any_childs(self):
+        if self.childs:
+            return True
+        return False
+
+    def get_attr(self,key):
         '''
-        获取此节点的文字信息，如果不存在则返回None
+        返回key对应的属性值，不存在则返回None
+        :param key:
         :return:
         '''
-        return self.__take_attr("text")
-    @property
-    def clazz(self):
-        return self._class
-    @property
-    def package(self):
-        return self._package
-    @property
-    def content_desc(self):
-        return self._content_desc
-    @property
-    def checked(self):
-        return self._checked
-    @property
-    def clickable(self):
-        return self._clickable
-    @property
-    def enabled(self):
-        return self._enabled
-    @property
-    def focused(self):
-        return self._focused
-    @property
-    def scrollable(self):
-        return self._scrollable
-    @property
-    def long_clickable(self):
-        return self._long_clickable
-    @property
-    def password(self):
-        return self._password
-    @property
-    def selected(self):
-        return self._selected
+        if key==By.bounds:
+            return self.bounds
+        return self.__take_attr(key)
     @property
     def bounds(self):
+        if not self._bounds:
+            self.__take_bounds()
         return self._bounds
     @property
     def father_node(self):
+        if not self._parent_node:
+            self.__take_parent_node()
         return self._parent_node
     @property
     def childs(self):
+        if not self._childs:
+            self.__take_childs()
         return self._childs
     @property
     def nodeinfor(self):
         return self._nodeinfor
-
+    @property
+    def text(self):
+        if not self._text:
+            self._text=self.__take_attr(By.text)
+        return self._text
+    @property
+    def resource_id(self):
+        if not self._resource_id:
+            self._resource_id=self.__take_attr(By.resource_id)
+        return self._resource_id
+    @property
+    def package(self):
+        if not self._package:
+            self._package=self.__take_attr(By.package)
+        return self._package
+    @property
+    def clazz(self):
+        if not self._clazz:
+            self._clazz=self.__take_attr(By.clazz)
+        return self._clazz
 class UiProxy():
     '''
     此类为ui控件的代理，通过解析xml文件生成。
     '''
-    def __init__(self,nodes=None):#当前ui代理所代理的节点
-        self._re_nodes=nodes  #原始dom节点
+    def __init__(self,nodes:[] or Node=None):#当前ui代理所代理的节点
         self._nodes=[]
         if type(nodes)==type([]):#传入的是dom节点数组
             for node in nodes:
-                self._nodes.append(Node(nodeinfor=node))
+                self._nodes.append(node)
         else:#传入了单个dom节点
-            self._nodes.append(Node(nodeinfor=nodes))#自建node节点
+            self._nodes.append(nodes)#自建node节点
     def __getitem__(self, item):
         node_count=self.get_node_count()
         if item>=node_count:
             raise IndexError("索引超出")
-        return UiProxy(self._nodes[item].nodeinfor)
+        return UiProxy(self._nodes[item])
     def offspring(self,infor=None,by:By=By.text):
         '''
         查找当前节点的后代节点（不仅限于子节点，也包括子节点的子节点）
@@ -174,27 +179,22 @@ class UiProxy():
                 all_node=self.__del_same_node(all_node)#清除此节点列表里的重复节点引用
         if all_node:
             return UiProxy(all_node)
-    def __traverse_node(self,node,infor=None,by:By=By.text):
+    def __traverse_node(self,node:Node,infor=None,by:By=By.text):
         all_node=[]
         if infor:
             if by==By.part_text:
-                if node.hasAttribute("text"):
-                    if infor in node.getAttribute("text"):
+                if node.get_attr("text"):
+                    if infor in node.get_attr("text"):
                         all_node.append(node)
             else:
-                if node.hasAttribute(by):
-                    if infor==node.getAttribute(by):
+                if node.get_attr(by):
+                    if infor==node.get_attr(by):
                         all_node.append(node)
         else:
             all_node.append(node)
-        if node.hasChildNodes():
+        if node.have_any_childs():
             #如果这个节点存在子节点,则获取这些子节点
-            childs=[]
-            child_nodes = node.childNodes
-            for child in child_nodes:
-                if type(child) == Element:  # 只解析元素型节点，忽略文本型节点
-                    childs.append(child)
-            for child in childs:
+            for child in node.childs:
                 all_node+=self.__traverse_node(child,infor,by)
         return all_node
     def child(self,infor=None,by:By=By.text):
@@ -215,13 +215,13 @@ class UiProxy():
             all_node=[]
             if by==By.part_text:
                 for node in temp_all_node:
-                    if node.hasAttribute("text"):
-                        if infor in node.getAttribute("text"):
+                    if node.get_attr("text"):
+                        if infor in node.get_attr("text"):
                             all_node.append(node)
             else:
                 for node in temp_all_node:
-                    if node.hasAttribute(by):
-                        if infor == node.getAttribute(by):
+                    if node.get_attr(by):
+                        if infor == node.get_attr(by):
                             all_node.append(node)
         else:
             #返回所有子节点
@@ -241,7 +241,7 @@ class UiProxy():
         '''
         for i in range(0,len(all_node)):
             for j in range(i+1,len(all_node)):
-                if all_node[i].isSameNode(all_node[j]):
+                if all_node[i].is_same_node(all_node[j]):
                     #比较2个节点
                     #如果此节点和后面某一个节点相同则将前一个节点至为None
                     all_node[i]=None
@@ -267,5 +267,19 @@ class UiProxy():
             return self._nodes[0].resource_id
     def get_node_count(self):
         return len(self._nodes)
-
-
+    def __get_tab(self,count):
+        str=""
+        for i in range(0,count):
+            str+="-"
+        return str
+    def get_tree(self):
+        if len(self._nodes)>=1:
+            node=self._nodes[0]
+            return self.__tree(node,0)
+    def __tree(self,node,count):
+        str="%s%s%s\n" % (count,self.__get_tab(count),node)
+        if node.have_any_childs():
+            childs=node.childs
+            for child in childs:
+                str+=self.__tree(child,count+1)
+        return str

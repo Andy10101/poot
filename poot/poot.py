@@ -17,5 +17,6 @@ class Poot():
     def __resolve_node(self,xml):
         DomTree=parse(xml)
         root_Node=DomTree.documentElement
+        node=Node(root_Node)
         #传入xml文件信息，并解析其节点信息存储至node
-        return UiProxy(root_Node)
+        return UiProxy(node)
