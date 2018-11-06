@@ -1,4 +1,6 @@
-import datetime
-if __name__=="__main__":
+from poot.poot import Poot,By
+import os
+poot=Poot()
+xmlPath="%s/s.xml" % os.getcwd()
 
-    pass
+print(poot(xmlPath,"com.tencent.mm:id/dmc",By.resource_id).get_resource_id())

@@ -1,7 +1,6 @@
 from device.cmd import *
 import os
 from io import StringIO
-import config
 #获取当前连接设备的List
 import time
 #raise：当未有设备连接，将抛出一个错误

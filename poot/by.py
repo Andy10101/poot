@@ -1,0 +1,5 @@
+resource_id="resource-id"
+text="text"
+package="package"
+clazz="class"
+part_text="part_text"
