@@ -30,7 +30,7 @@ class Poot():
         self._is_freeze=False  #是否处于冻结ui状态
         self._xml=None  #ui xml文件实列
         self._adb=ADB(self._device_id) #adb 实例
-        self._time_out=30#获取ui的超时时间
+        self._time_out=10#获取ui的超时时间
         self._sleep_spacing=1#单次获取ui睡眠间隔
         self._sleep_count=self._time_out/self._sleep_spacing#获取ui睡眠次数
     def __call__(self,infor=None,by:By=By.text):
@@ -104,13 +104,17 @@ class Poot():
         :return:
         '''
         self._sleep_spacing=time_spacing
-    @inforPrint
-    def return_home(self,*,infor="回到桌面",beforeTime=1,endTime=1):
+    @property
+    def device_id(self):
+        return self._device_id
+
+    @inforPrint(infor="返回桌面")
+    def return_home(self,*,infor=None,beforeTime=0,endTime=0):
         '''
         回到桌面
         :return:
         '''
         self._adb.returnHome()
-    @inforPrint
-    def get_wx_databases(self,dsc,*,infor="获取微信数据库",beforeTime=1,endTime=1):
+    @inforPrint(infor="获取微信数据库")
+    def get_wx_databases(self,dsc,*,infor=None,beforeTime=0,endTime=0):
         return self._adb.get_wx_databases(dsc)

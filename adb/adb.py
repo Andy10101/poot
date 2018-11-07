@@ -5,6 +5,16 @@ class ADB():
     def __init__(self,device_id:str):
         self._device_id=device_id
         self._cmd_prefix="adb -s %s " % device_id
+
+    def tap_x_y(self,x,y):
+        '''
+        点击【x,y】对应的坐标点
+        :param x:
+        :param y:
+        :return:
+        '''
+        self.__make_shell_by_pope("input tap %s %s",x,y)
+
     def returnHome(self):
         self.__make_cmd_by_pope("shell input keyevent 3")
     def rm_file(self,file):
@@ -49,7 +59,7 @@ class ADB():
         self.cp_src_file_to_dsc("/data/data/com.tencent.mm/shared_prefs/system_config_prefs.xml","/mnt/sdcard/prefs.xml")
         self.rm_computer_file(adb.TEMP_XML)
         self.pull_file_to_dsc("/mnt/sdcard/prefs.xml",adb.TEMP_XML)
-        strs=""
+        self.rm_file("/mnt/sdcard/prefs.xml")
         with open(adb.TEMP_XML) as file:
             strs=file.read()
         uid=(re.compile(r'_uin" value="([-]*[\d]+)"').findall(strs))[0]
@@ -303,3 +313,6 @@ class ADB():
             if "not found" in resault:
                 raise BaseException(adb.DEVICE_NOT_FOUND)
             return str(resault).strip()
+    @property
+    def device_id(self):
+        return self._device_id

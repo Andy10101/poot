@@ -8,10 +8,10 @@ class Bound():
     def __init__(self,bounds:str):
         x1,y1=bounds.split("][")[0].split(",")
         x2,y2=bounds.split("][")[1].split(",")
-        self._left_x=x1[1:]
-        self._left_y=y1
-        self._right_x=x2
-        self._right_y=y2[0:-2]
+        self._left_x=int(x1[1:])
+        self._left_y=int(y1)
+        self._right_x=int(x2)
+        self._right_y=int(y2[0:-1])
     def __str__(self):
         return "[%s,%s][%s,%s]" % (self._left_x,self._left_y,self._right_x,self._right_y)
     @property
@@ -157,9 +157,10 @@ class UiProxy():
     '''
     此类为ui控件的代理，通过解析xml文件生成。
     '''
-    def __init__(self,nodes:[] or Node,adb):#当前ui代理所代理的节点
+    def __init__(self,nodes:[] or Node,adb:ADB):#当前ui代理所代理的节点
         self._nodes=[]
         self._adb=adb
+        self._focus=(0.5,0.5)#ui的焦点，用于点击或者滑动
         if type(nodes)==type([]):#传入的是dom节点数组
             for node in nodes:
                 self._nodes.append(node)
@@ -299,6 +300,38 @@ class UiProxy():
     def get_value(self):
         if len(self._nodes)>=1:
             return self._nodes[0].value
-    @inforPrint
-    def return_home(self):
+    @property
+    def device_id(self):
+        return self._adb.device_id
+
+    def focus(self,focus:()):
+        '''
+        设置新的点击焦点
+        :param focus:
+        :return:
+        '''
+        if type(focus) != type((1,)):
+            raise BaseException("焦点必须是元组")
+        self._focus=focus
+        return self
+
+
+    @inforPrint(infor="返回桌面")
+    def return_home(self,*,infor=None,beforeTime=0,endTime=0):
         self._adb.returnHome()
+    @inforPrint(infor="点击")
+    def tap(self,focus:()=None,*,infor=None,beforeTime=0,endTime=0):
+        if len(self._nodes)>=1:
+            node:Node=self._nodes[0]
+            bound:Bound=node.bounds
+            if focus:
+                if type(focus)!=type((1,)):
+                    raise BaseException("焦点必须是元组")
+            else:
+                focus=self._focus#使用预置焦点
+            x_=(bound.right_x-bound.left_x)*focus[0]
+            y_=(bound.right_y-bound.left_y)*focus[1]
+            x=bound.left_x+x_
+            y=bound.left_y+y_
+            self._adb.tap_x_y(x,y)
+        #self._adb.tap_x_y()
