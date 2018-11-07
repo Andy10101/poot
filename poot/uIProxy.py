@@ -1,6 +1,7 @@
 import poot.by as By
 from xml.dom.minidom import Element
-
+from adb.adb import ADB
+from poot import inforPrint
 class Bound():
     #位置信息
     #[0,0][720,1280]
@@ -37,11 +38,12 @@ class Node():
         self._parent_node=None
         self._clazz=None
         self._package=None
+        self._index=None
         self._nodeinfor=nodeinfor
 
     def __str__(self):
         #[resource-id,text,desc,bounds]
-        return "%s：%s [%s]" % (self.clazz,self.text,self.bounds)
+        return " (%s)%s:%s %s" % (self.index,self.clazz,self.text,self.bounds)
     def __take_childs(self):
         '''
         获得子节点集合
@@ -54,8 +56,6 @@ class Node():
             for child in child_nodes:
                 if type(child)==Element:#只解析元素型节点，忽略文本型节点
                     self._childs.append(Node(child))
-        if len(self._childs)<=0:
-            self._childs=None
 
     def __take_parent_node(self):
         '''
@@ -141,12 +141,18 @@ class Node():
         if not self._clazz:
             self._clazz=self.__take_attr(By.clazz)
         return self._clazz
+    @property
+    def index(self):
+        if not self._index:
+            self._index=self.__take_attr(By.index)
+        return self._index
 class UiProxy():
     '''
     此类为ui控件的代理，通过解析xml文件生成。
     '''
-    def __init__(self,nodes:[] or Node=None):#当前ui代理所代理的节点
+    def __init__(self,nodes:[] or Node,adb:ADB):#当前ui代理所代理的节点
         self._nodes=[]
+        self._adb=adb
         if type(nodes)==type([]):#传入的是dom节点数组
             for node in nodes:
                 self._nodes.append(node)
@@ -156,7 +162,7 @@ class UiProxy():
         node_count=self.get_node_count()
         if item>=node_count:
             raise IndexError("索引超出")
-        return UiProxy(self._nodes[item])
+        return UiProxy(self._nodes[item],self._adb)
     def offspring(self,infor=None,by:By=By.text):
         '''
         查找当前节点的后代节点（不仅限于子节点，也包括子节点的子节点）
@@ -178,7 +184,7 @@ class UiProxy():
                     all_node += self.__traverse_node(node)#遍历此子节点下的所有节点，包括此子节点
                 all_node=self.__del_same_node(all_node)#清除此节点列表里的重复节点引用
         if all_node:
-            return UiProxy(all_node)
+            return UiProxy(all_node,self._adb)
     def __traverse_node(self,node:Node,infor=None,by:By=By.text):
         all_node=[]
         if infor:
@@ -231,7 +237,7 @@ class UiProxy():
                 all_node+=node
             all_node=self.__del_same_node(all_node)
         if all_node:
-            return UiProxy(nodes=all_node)
+            return UiProxy(all_node,self._adb)
     def __del_same_node(self,all_node:[]):
         '''
         比较comper_node是否和all_node中的某一个node相同，如果相同则返回原始all_node,不相同则加入comper_node并返回
@@ -283,3 +289,6 @@ class UiProxy():
             for child in childs:
                 str+=self.__tree(child,count+1)
         return str
+    @inforPrint
+    def return_home(self):
+        self._adb.returnHome()
