@@ -105,9 +105,12 @@ class Poot():
         '''
         self._sleep_spacing=time_spacing
     @inforPrint
-    def return_home(self):
+    def return_home(self,*,infor="回到桌面",beforeTime=1,endTime=1):
         '''
         回到桌面
         :return:
         '''
         self._adb.returnHome()
+    @inforPrint
+    def get_wx_databases(self,dsc,*,infor="获取微信数据库",beforeTime=1,endTime=1):
+        return self._adb.get_wx_databases(dsc)

@@ -1,7 +1,7 @@
 import poot.by as By
 from xml.dom.minidom import Element
-from adb.adb import ADB
 from poot import inforPrint
+from adb.adb import ADB
 class Bound():
     #位置信息
     #[0,0][720,1280]
@@ -40,7 +40,7 @@ class Node():
         self._package=None
         self._index=None
         self._nodeinfor=nodeinfor
-
+        self._value=Node
     def __str__(self):
         #[resource-id,text,desc,bounds]
         return " (%s)%s:%s %s" % (self.index,self.clazz,self.text,self.bounds)
@@ -56,7 +56,6 @@ class Node():
             for child in child_nodes:
                 if type(child)==Element:#只解析元素型节点，忽略文本型节点
                     self._childs.append(Node(child))
-
     def __take_parent_node(self):
         '''
         获得此节点的父节点
@@ -88,12 +87,10 @@ class Node():
         :return:
         '''
         return self._nodeinfor.isSameNode(node.nodeinfor)
-
     def have_any_childs(self):
         if self.childs:
             return True
         return False
-
     def get_attr(self,key):
         '''
         返回key对应的属性值，不存在则返回None
@@ -146,11 +143,21 @@ class Node():
         if not self._index:
             self._index=self.__take_attr(By.index)
         return self._index
+    @property
+    def value(self):
+        if not self._value:
+            self._value=self.__take_attr(By.value)
+        return self._value
+    @property
+    def name(self):
+        if not self._name:
+            self._name=self.__take_attr(By.name)
+        return self._name
 class UiProxy():
     '''
     此类为ui控件的代理，通过解析xml文件生成。
     '''
-    def __init__(self,nodes:[] or Node,adb:ADB):#当前ui代理所代理的节点
+    def __init__(self,nodes:[] or Node,adb):#当前ui代理所代理的节点
         self._nodes=[]
         self._adb=adb
         if type(nodes)==type([]):#传入的是dom节点数组
@@ -289,6 +296,9 @@ class UiProxy():
             for child in childs:
                 str+=self.__tree(child,count+1)
         return str
+    def get_value(self):
+        if len(self._nodes)>=1:
+            return self._nodes[0].value
     @inforPrint
     def return_home(self):
         self._adb.returnHome()
